@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 
 	"cloud.google.com/go/datastore"
 	"golang.org/x/net/context"
@@ -74,7 +75,7 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 func GetAllCustomers(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	var customers []models.Customer
-	kind := util.MustGetenv("DATA_STORE_KIND")
+	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
 	customers, err := models.GetAllCustomers(kind, ctx, r.URL.Query())
 	w.Header().Set("Content-Type", "application/json")
 	if customers == nil {
@@ -88,11 +89,21 @@ func GetAllCustomers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetCustomerByEmailAndId(w http.ResponseWriter, r *http.Request) {
+func GetCustomerUsingMultiFilters(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
+	params := mux.Vars(r)
+	partner_id := params["partner_id"]
+	email := params["email"]
+	fmt.Println(partner_id)
+	fmt.Println(email)
 	var customers []models.Customer
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	customers, err := models.GetCustomerByEmailAndId(kind, ctx, r.URL.Query())
+
+	paramValues := url.Values{}
+	paramValues.Add("partner_id", partner_id)
+	paramValues.Add("email", email)
+
+	customers, err := models.GetCustomerUsingMultiFilters(kind, ctx, paramValues)
 	w.Header().Set("Content-Type", "application/json")
 	if customers == nil {
 		var errorObj = "{'Message':'No Customer found'}"
