@@ -17,7 +17,7 @@ func TestPublishProduct(t *testing.T) {
 	// Create a request to pass to our handler.
 	req, err := http.NewRequest("POST", "/customer-data-publish", nil)
 	if err != nil {
-		t.Printf(err)
+		t.Fatal(err)
 	}
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
