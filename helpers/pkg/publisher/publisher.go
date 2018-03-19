@@ -33,3 +33,36 @@ func PublishCustomer(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 }
+
+// AddCustomer publishes raw customer data
+func AddCustomer(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	var customer models.Customer
+	err = json.Unmarshal(body, &customer)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error found: %v", err)
+		return
+	}
+
+	ctx := context.Background()
+	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
+	client, err := pubsub.NewClient(ctx, projectID)
+	if err != nil {
+		log.Printf("Failed to create client: %v", err)
+	}
+
+	t := client.Topic(util.MustGetenv("RAW_CUSTOMER_DATA"))
+	output, _ := json.Marshal(customer)
+	result := t.Publish(ctx, &pubsub.Message{
+		Data: output,
+	})
+	id, err := result.Get(ctx)
+	if err != nil {
+		log.Printf("Encountered error publishing: %v", err)
+	}
+	log.Printf("Published a customer message in msg ID: %v\n", id)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/text; charset=utf-8")
+}
