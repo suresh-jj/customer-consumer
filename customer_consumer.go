@@ -51,6 +51,7 @@ func doHandleRoutes() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", api.HealthCheckFunc)
 	router.HandleFunc("/customer-data-publish", publisher.PublishCustomer)
+	router.HandleFunc("/add-customer", publisher.AddCustomer).Methods("POST")
 	router.HandleFunc("/customer/{partner_id}", api.GetCustomer).Methods("GET")
 	router.HandleFunc("/edit-customer/{partner_id}", api.EditCustomer).Methods("POST")
 	router.HandleFunc("/delete-customer/{partner_id}", api.DeleteCustomer).Methods("GET")
