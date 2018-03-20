@@ -34,7 +34,7 @@ func SubscribeCustomer() {
 		if err != nil {
 			log.Printf("Failed to insert customer data: %v", err)
 		}
-		key, err := models.CreateCustomer(kind, customer, ctx)
+		key, err := models.CreateCustomer(ctx, kind, customer)
 		if key != nil {
 			log.Printf(key.Name + " published")
 		}

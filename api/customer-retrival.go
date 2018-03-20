@@ -4,113 +4,133 @@ import (
 	"customer-consumer/helpers/util"
 	"customer-consumer/models"
 	"encoding/json"
-	"fmt"
 	"gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 
 	"cloud.google.com/go/datastore"
 	"golang.org/x/net/context"
 )
 
+//GetCustomer gives a single customer
 func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partner_id := params["partner_id"]
+	partnerID := params["partner_id"]
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	customer, err := models.GetCustomer(kind, partner_id, ctx)
+	customer, err := models.GetCustomer(ctx, kind, partnerID)
 	w.Header().Set("Content-Type", "application/json")
 	if customer == nil {
 		if err != nil {
 			log.Printf(err.Error())
 		}
-		var errorObj = "{'Message':'No Customer found'}"
-		json.NewEncoder(w).Encode(errorObj)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = "No Customer found"
+		json.NewEncoder(w).Encode(errormsg)
 	} else {
 		json.NewEncoder(w).Encode(customer)
 	}
 }
 
+//EditCustomer edits and updates a particular customer
 func EditCustomer(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	var customer models.Customer
 	err = json.Unmarshal(body, &customer)
-
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error found: %v", err)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = err.Error()
+		json.NewEncoder(w).Encode(errormsg)
+		log.Printf(err.Error())
 		return
 	}
 
 	ctx := context.Background()
 	params := mux.Vars(r)
-	customer_id := params["partner_id"]
+	partnerID := params["partner_id"]
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
-		log.Printf("Failed to create client: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = err.Error()
+		json.NewEncoder(w).Encode(errormsg)
+		log.Printf(err.Error())
+		return
 	}
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	models.EditCustomer(client, kind, customer_id, &customer, ctx)
+	models.EditCustomer(ctx, client, kind, partnerID, &customer)
 	json.NewEncoder(w).Encode(customer)
 }
 
+//DeleteCustomer deletes a particular customer
 func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	customer_id := params["partner_id"]
+	partnerID := params["partner_id"]
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
 	client, err := datastore.NewClient(ctx, projectID)
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
-		log.Printf("Failed to create client: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = err.Error()
+		json.NewEncoder(w).Encode(errormsg)
+		log.Printf(err.Error())
+		return
 	}
 	var customer models.Customer
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	models.DeleteCustomer(client, kind, customer_id, &customer, ctx)
+	models.DeleteCustomer(ctx, client, kind, partnerID, &customer)
 	json.NewEncoder(w).Encode(customer)
 }
 
+//GetAllCustomers gives all cutomers
 func GetAllCustomers(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	var customers []models.Customer
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	customers, err := models.GetAllCustomers(kind, ctx, r.URL.Query())
+	params := mux.Vars(r)
+	var customerfilter models.CustomerFilter
+	customerfilter.PartnerId = params["partner_id"]
+	customers, err := models.GetAllCustomers(ctx, kind, customerfilter)
 	w.Header().Set("Content-Type", "application/json")
 	if customers == nil {
-		var errorObj = "{'Message':'No Customer found'}"
 		if err != nil {
 			log.Printf(err.Error())
 		}
-		json.NewEncoder(w).Encode(errorObj)
+		w.WriteHeader(http.StatusBadRequest)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = "No Customer found"
+		json.NewEncoder(w).Encode(errormsg)
 	} else {
 		json.NewEncoder(w).Encode(customers)
 	}
 }
 
+//GetCustomerUsingMultiFilters gives customer data with specific search filters
 func GetCustomerUsingMultiFilters(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partner_id := params["partner_id"]
-	email := params["email"]
-	fmt.Println(partner_id)
-	fmt.Println(email)
 	var customers []models.Customer
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
 
-	paramValues := url.Values{}
-	paramValues.Add("partner_id", partner_id)
-	paramValues.Add("email", email)
+	var customerfilter models.CustomerFilter
+	customerfilter.PartnerId = params["partner_id"]
+	customerfilter.Email = params["email"]
 
-	customers, err := models.GetCustomerUsingMultiFilters(kind, ctx, paramValues)
+	customers, err := models.GetCustomerUsingMultiFilters(ctx, kind, customerfilter)
 	w.Header().Set("Content-Type", "application/json")
 	if customers == nil {
-		var errorObj = "{'Message':'No Customer found'}"
 		if err != nil {
 			log.Printf(err.Error())
 		}
-		json.NewEncoder(w).Encode(errorObj)
+		var errormsg = models.CustomerError{}
+		errormsg.Error = "No Customer found"
+		json.NewEncoder(w).Encode(errormsg)
 	} else {
 		json.NewEncoder(w).Encode(customers)
 	}

@@ -2,20 +2,46 @@ package models
 
 import (
 	"customer-consumer/helpers/util"
+	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"cloud.google.com/go/datastore"
 	"golang.org/x/net/context"
 )
 
-func CreateCustomer(kind string, customer Customer, ctx context.Context) (*datastore.Key, error) {
+//CreateCustomer creates new customer
+func CreateCustomer(ctx context.Context, kind string, customer Customer) (*datastore.Key, error) {
 	name := customer.PartnerId
 	taskKey := datastore.NameKey(kind, name, nil)
 	client, cerr := DataStoreClient()
 	if cerr != nil {
 		return nil, cerr
+	}
+
+	//regex validations:
+	var validEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	var validPhone = regexp.MustCompile(`^(\([0-9]{3}\) |[0-9]{3}-)[0-9]{3}-[0-9]{4}$`)
+
+	if !validEmail.MatchString(customer.Email) {
+		return nil, errors.New("Email not valid")
+	}
+	if !validPhone.MatchString(customer.PhoneNumber) {
+		return nil, errors.New("Phone Number must contain 10 digits only")
+	}
+
+	//check if customer is already existing
+	var isExisting bool
+	isExisting, err := isExistingCustomer(ctx, kind, customer)
+	log.Printf("isExistingCustomer:: %t", isExisting)
+	if isExisting {
+		if err != nil {
+			log.Printf(err.Error())
+		}
+		log.Printf("Failed to insert as the customer is already existing in storage!")
+		return nil, errors.New("Customer already exists")
 	}
 
 	key, err := client.Put(ctx, taskKey, &customer)
@@ -24,11 +50,11 @@ func CreateCustomer(kind string, customer Customer, ctx context.Context) (*datas
 		log.Printf("Failed to insert the details of the customer into data-storage, due to: %v", err)
 		return nil, err
 	}
-	log.Printf(key.Name)
 	return key, err
 }
 
-func GetCustomer(kind string, name string, ctx context.Context) (*Customer, error) {
+//GetCustomer gives a single customer
+func GetCustomer(ctx context.Context, kind string, name string) (*Customer, error) {
 	var customer Customer
 	taskKey := datastore.NameKey(kind, name, nil)
 	client, err := DataStoreClient()
@@ -42,7 +68,8 @@ func GetCustomer(kind string, name string, ctx context.Context) (*Customer, erro
 	return &customer, err
 }
 
-func EditCustomer(client *datastore.Client, kind string, name string, dst interface{}, ctx context.Context) (*Customer, error) {
+//EditCustomer edits and updates a particular customer
+func EditCustomer(ctx context.Context, client *datastore.Client, kind string, name string, dst interface{}) (*Customer, error) {
 	var customer Customer
 	taskKey := datastore.NameKey(kind, name, nil)
 	client, err := DataStoreClient()
@@ -57,7 +84,8 @@ func EditCustomer(client *datastore.Client, kind string, name string, dst interf
 	return &customer, err
 }
 
-func DeleteCustomer(client *datastore.Client, kind string, name string, dst interface{}, ctx context.Context) (*Customer, error) {
+//DeleteCustomer deletes a particular customer
+func DeleteCustomer(ctx context.Context, client *datastore.Client, kind string, name string, dst interface{}) (*Customer, error) {
 	var customer Customer
 	taskKey := datastore.NameKey(kind, name, nil)
 	client, err := DataStoreClient()
@@ -72,16 +100,37 @@ func DeleteCustomer(client *datastore.Client, kind string, name string, dst inte
 	return &customer, err
 }
 
-func GetAllCustomers(kind string, ctx context.Context, paramMap map[string][]string) ([]Customer, error) {
+//GetAllCustomers gives all cutomers
+func GetAllCustomers(ctx context.Context, kind string, customerfilter CustomerFilter) ([]Customer, error) {
 	client, err := DataStoreClient()
 	var customers []Customer
-	partner_id := paramMap["partner_id"]
-	var partnerId string
+	q := datastore.NewQuery(kind).Order("FirstName")
+
+	if customerfilter.PartnerId != "" {
+		q = q.Filter("PartnerID=", customerfilter.PartnerId)
+	}
+
+	_, err = client.GetAll(ctx, q, &customers)
+	if err != nil {
+		log.Printf(err.Error())
+		return nil, err
+	}
+	return customers, err
+}
+
+//GetCustomerUsingMultiFilters gives customer data with specific search filters
+func GetCustomerUsingMultiFilters(ctx context.Context, kind string, customerfilter CustomerFilter) ([]Customer, error) {
+	client, err := DataStoreClient()
+	var customers []Customer
 	q := datastore.NewQuery(kind)
 
-	if partner_id != nil {
-		partnerId = partner_id[0]
-		q = q.Filter("PartnerID=", partnerId)
+	if customerfilter.PartnerId != "" {
+		q = q.Filter("PartnerId=", customerfilter.PartnerId)
+		log.Printf("search filter - PartnerId : %s", customerfilter.PartnerId)
+	}
+	if customerfilter.Email != "" {
+		q = q.Filter("Email=", customerfilter.Email)
+		log.Printf("search filter - Email : %s", customerfilter.Email)
 	}
 
 	_, err = client.GetAll(ctx, q, &customers)
@@ -93,32 +142,32 @@ func GetAllCustomers(kind string, ctx context.Context, paramMap map[string][]str
 	return customers, err
 }
 
-func GetCustomerUsingMultiFilters(kind string, ctx context.Context, paramMap map[string][]string) ([]Customer, error) {
+//isExistingCustomer validates if the Customer is already existing in system
+func isExistingCustomer(ctx context.Context, kind string, customer Customer) (bool, error) {
+	var isExisting bool
+	email := customer.Email
 	client, err := DataStoreClient()
 	var customers []Customer
 	q := datastore.NewQuery(kind)
 
-	partner_id := paramMap["partner_id"]
-	email := paramMap["email"]
-
-	if partner_id != nil {
-		q = q.Filter("PartnerId=", partner_id)
-		log.Printf("search filter - PartnerId : %s", partner_id)
-	}
-	if email != nil {
+	if email != "" {
 		q = q.Filter("Email=", email)
-		log.Printf("search filter - Email : %s", email)
 	}
 
 	_, err = client.GetAll(ctx, q, &customers)
 	if err != nil {
-		fmt.Println(err)
 		log.Printf(err.Error())
-		return nil, err
+		return false, err
 	}
-	return customers, err
+	if customers == nil {
+		isExisting = false
+	} else {
+		isExisting = true
+	}
+	return isExisting, err
 }
 
+//DataStoreClient returns the datastore client object
 func DataStoreClient() (*datastore.Client, error) {
 	ctx := context.Background()
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
