@@ -23,7 +23,7 @@ func CreateCustomer(ctx context.Context, kind string, customer Customer) (*datas
 
 	//regex validations:
 	var validEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	var validPhone = regexp.MustCompile(`^(\([0-9]{3}\) |[0-9]{3}-)[0-9]{3}-[0-9]{4}$`)
+	var validPhone = regexp.MustCompile(`^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$`)
 
 	if !validEmail.MatchString(customer.Email) {
 		return nil, errors.New("Email not valid")
@@ -71,9 +71,9 @@ func GetCustomer(ctx context.Context, kind string, name string) (*Customer, erro
 //EditCustomer edits and updates a particular customer
 func EditCustomer(ctx context.Context, client *datastore.Client, kind string, name string, dst interface{}) (*Customer, error) {
 	var customer Customer
-	taskKey := datastore.NameKey(kind, name, nil)
+	customerKey := datastore.NameKey(kind, name, nil)
 	client, err := DataStoreClient()
-	_, err = client.Put(ctx, taskKey, dst)
+	_, err = client.Put(ctx, customerKey, dst)
 	if err != nil {
 		log.Printf("Failed to update the customer details from data-storage, due to: %v", err)
 		if strings.HasPrefix(err.Error(), `datastore: no such entity`) {
@@ -85,19 +85,18 @@ func EditCustomer(ctx context.Context, client *datastore.Client, kind string, na
 }
 
 //DeleteCustomer deletes a particular customer
-func DeleteCustomer(ctx context.Context, client *datastore.Client, kind string, name string, dst interface{}) (*Customer, error) {
-	var customer Customer
-	taskKey := datastore.NameKey(kind, name, nil)
+func DeleteCustomer(ctx context.Context, client *datastore.Client, kind string, name string) error {
+	customerKey := datastore.NameKey(kind, name, nil)
 	client, err := DataStoreClient()
-	err = client.Delete(ctx, taskKey)
+	err = client.Delete(ctx, customerKey)
 	if err != nil {
 		log.Printf("Failed to delete the customer details from data-storage, due to: %v", err)
 		if strings.HasPrefix(err.Error(), `datastore: no such entity`) {
 			err = fmt.Errorf(`Customer '%v' not found`, name)
-			return nil, err
+			return err
 		}
 	}
-	return &customer, err
+	return err
 }
 
 //GetAllCustomers gives all cutomers

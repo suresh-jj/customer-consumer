@@ -26,6 +26,7 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 			log.Printf(err.Error())
 		}
 		var errormsg = models.CustomerError{}
+		w.WriteHeader(http.StatusNotFound)
 		errormsg.Error = "No Customer found"
 		json.NewEncoder(w).Encode(errormsg)
 	} else {
@@ -47,7 +48,6 @@ func EditCustomer(w http.ResponseWriter, r *http.Request) {
 		log.Printf(err.Error())
 		return
 	}
-
 	ctx := context.Background()
 	params := mux.Vars(r)
 	partnerID := params["customer_id"]
@@ -70,7 +70,7 @@ func EditCustomer(w http.ResponseWriter, r *http.Request) {
 func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partnerID := params["customer_id"]
+	customerID := params["customer_id"]
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
 	client, err := datastore.NewClient(ctx, projectID)
 	w.Header().Set("Content-Type", "application/json")
@@ -82,10 +82,8 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 		log.Printf(err.Error())
 		return
 	}
-	var customer models.Customer
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
-	models.DeleteCustomer(ctx, client, kind, partnerID, &customer)
-	json.NewEncoder(w).Encode(customer)
+	models.DeleteCustomer(ctx, client, kind, customerID)
 }
 
 //GetAllCustomers gives all cutomers
@@ -102,7 +100,7 @@ func GetAllCustomers(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf(err.Error())
 		}
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		var errormsg = models.CustomerError{}
 		errormsg.Error = "No Customer found"
 		json.NewEncoder(w).Encode(errormsg)
@@ -130,6 +128,7 @@ func GetCustomerUsingMultiFilters(w http.ResponseWriter, r *http.Request) {
 		}
 		var errormsg = models.CustomerError{}
 		errormsg.Error = "No Customer found"
+		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(errormsg)
 	} else {
 		json.NewEncoder(w).Encode(customers)

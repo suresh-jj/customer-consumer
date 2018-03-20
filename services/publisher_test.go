@@ -1,4 +1,4 @@
-package publisher
+package services
 
 import (
 	"net/http"
