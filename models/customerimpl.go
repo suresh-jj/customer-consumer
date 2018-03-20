@@ -115,7 +115,6 @@ func GetAllCustomers(ctx context.Context, kind string, customerfilter CustomerFi
 		log.Printf(err.Error())
 		return nil, err
 	}
-	fmt.Println("dd", customers)
 	return customers, err
 }
 
