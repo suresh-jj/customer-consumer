@@ -17,7 +17,7 @@ import (
 func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partnerID := params["partner_id"]
+	partnerID := params["customer_id"]
 	kind := util.MustGetenv("DATA_STORE_KIND_CUSTOMER")
 	customer, err := models.GetCustomer(ctx, kind, partnerID)
 	w.Header().Set("Content-Type", "application/json")
@@ -50,7 +50,7 @@ func EditCustomer(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partnerID := params["partner_id"]
+	partnerID := params["customer_id"]
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
 	client, err := datastore.NewClient(ctx, projectID)
 	if err != nil {
@@ -70,7 +70,7 @@ func EditCustomer(w http.ResponseWriter, r *http.Request) {
 func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	params := mux.Vars(r)
-	partnerID := params["partner_id"]
+	partnerID := params["customer_id"]
 	projectID := util.MustGetenv("GOOGLE_CLOUD_PROJECT")
 	client, err := datastore.NewClient(ctx, projectID)
 	w.Header().Set("Content-Type", "application/json")

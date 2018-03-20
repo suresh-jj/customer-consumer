@@ -5,6 +5,7 @@ import (
 	"customer-consumer/helpers/util"
 	"customer-consumer/models"
 	"encoding/json"
+	"github.com/rs/xid"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -78,7 +79,7 @@ func AddCustomer(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(errormsg)
 		return
 	}
-
+	customer.Id = xid.New().String()
 	t := client.Topic(util.MustGetenv("RAW_CUSTOMER_DATA"))
 	output, _ := json.Marshal(customer)
 	result := t.Publish(ctx, &pubsub.Message{
@@ -93,8 +94,6 @@ func AddCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Published a customer message in msg ID: %v\n", id)
-	var succesmsg = models.CustomerSuccess{}
-	succesmsg.Id = id
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(succesmsg)
+	json.NewEncoder(w).Encode(customer)
 }

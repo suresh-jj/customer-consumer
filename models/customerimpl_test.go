@@ -16,7 +16,7 @@ func TestCreateCustomer(t *testing.T) {
 	customer.FirstName = "Suresh"
 	customer.LastName = "Jayapalan"
 	customer.Address = "India"
-	customer.PhoneNumber = "9990836778"
+	customer.PhoneNumber = "123-112-1234"
 	ctx := context.Background()
 	key, err := CreateCustomer(ctx, "Customers", customer)
 	log.Println(err)
@@ -39,10 +39,10 @@ func TestGetCustomer(t *testing.T) {
 func TestGetAllCustomers(t *testing.T) {
 	kind := util.MustGetenv("DATA_STORE_KIND")
 	ctx := context.Background()
-	v := url.Values{}
-	v.Add("partner_id", "001")
+	var customerfilter models.CustomerFilter
+	customerfilter.PartnerId = "001"
 	var customers []Customer
-	customers, err := GetAllCustomers(kind, ctx, v)
+	customers, err := GetAllCustomers(kind, ctx, customerfilter)
 	log.Println(err)
 	if customers == nil {
 		t.Errorf("Testing failed", customers)
@@ -52,10 +52,11 @@ func TestGetAllCustomers(t *testing.T) {
 func TestGetCustomerDetails(t *testing.T) {
 	kind := util.MustGetenv("DATA_STORE_KIND")
 	ctx := context.Background()
-	v := url.Values{}
-	v.Add("partner_id", "001")
+	var customerfilter models.CustomerFilter
+	customerfilter.PartnerId = "001"
+	customerfilter.Email = "suresh.sidusa@gmail.com"
 	var customers []Customer
-	customers, err := GetAllCustomers(kind, ctx, v)
+	customers, err := GetAllCustomers(kind, ctx, customerfilter)
 	log.Println(err)
 	if customers == nil {
 		t.Errorf("Testing failed", customers)

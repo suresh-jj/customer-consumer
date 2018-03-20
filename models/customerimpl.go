@@ -14,7 +14,7 @@ import (
 
 //CreateCustomer creates new customer
 func CreateCustomer(ctx context.Context, kind string, customer Customer) (*datastore.Key, error) {
-	name := customer.PartnerId
+	name := customer.Id
 	taskKey := datastore.NameKey(kind, name, nil)
 	client, cerr := DataStoreClient()
 	if cerr != nil {
@@ -107,7 +107,7 @@ func GetAllCustomers(ctx context.Context, kind string, customerfilter CustomerFi
 	q := datastore.NewQuery(kind).Order("FirstName")
 
 	if customerfilter.PartnerId != "" {
-		q = q.Filter("PartnerID=", customerfilter.PartnerId)
+		q = q.Filter("PartnerId=", customerfilter.PartnerId)
 	}
 
 	_, err = client.GetAll(ctx, q, &customers)
@@ -115,6 +115,7 @@ func GetAllCustomers(ctx context.Context, kind string, customerfilter CustomerFi
 		log.Printf(err.Error())
 		return nil, err
 	}
+	fmt.Println("dd", customers)
 	return customers, err
 }
 
@@ -145,13 +146,16 @@ func GetCustomerUsingMultiFilters(ctx context.Context, kind string, customerfilt
 //isExistingCustomer validates if the Customer is already existing in system
 func isExistingCustomer(ctx context.Context, kind string, customer Customer) (bool, error) {
 	var isExisting bool
-	email := customer.Email
 	client, err := DataStoreClient()
 	var customers []Customer
 	q := datastore.NewQuery(kind)
 
-	if email != "" {
-		q = q.Filter("Email=", email)
+	if customer.PartnerId != "" {
+		q = q.Filter("PartnerId=", customer.PartnerId)
+	}
+
+	if customer.Email != "" {
+		q = q.Filter("Email=", customer.Email)
 	}
 
 	_, err = client.GetAll(ctx, q, &customers)

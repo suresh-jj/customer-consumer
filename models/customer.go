@@ -3,6 +3,7 @@ package models
 // Customer used for customer data
 type Customer struct {
 	PartnerId   string `json:"partner_id"`
+	Id          string `json:"id"`
 	Email       string `json:"email"`
 	FirstName   string `json:"firstname"`
 	LastName    string `json:"lastname"`
@@ -12,10 +13,6 @@ type Customer struct {
 
 type CustomerError struct {
 	Error string `json:"error"`
-}
-
-type CustomerSuccess struct {
-	Id string `json:"id"`
 }
 
 type CustomerFilter struct {
