@@ -19,4 +19,3 @@ type CustomerFilter struct {
 	PartnerId string `json:"partner_id"`
 	Email     string `json:"email"`
 }
-
