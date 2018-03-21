@@ -1,4 +1,4 @@
-package subscriber
+package services
 
 import (
 	"context"
@@ -43,9 +43,9 @@ func SubscribeCustomer() {
 		}
 		msg.Ack()
 	})
-	if err == nil {
-		cancel()
-		return
+	if err != nil {
+		log.Printf("SubscribeCustomer() exited with error: %v", err)
 	}
-	log.Printf("SubscribeCustomer() exited with error: %v", err)
+	cancel()
+
 }

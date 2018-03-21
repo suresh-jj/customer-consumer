@@ -1,4 +1,4 @@
-package subscriber
+package services
 
 import (
 	"testing"
